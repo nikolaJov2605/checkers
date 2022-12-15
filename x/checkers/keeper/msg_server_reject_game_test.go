@@ -45,6 +45,84 @@ func TestRejectGameByBlackNoMove(t *testing.T) {
 	require.EqualValues(t, types.MsgRejectGameResponse{}, *rejectGameResponse)
 }
 
+func TestRejectGameByBlackNoMoveEmitted(t *testing.T) {
+	msgServer, _, context := setupMsgServerWithOneGameForRejectGame(t)
+	msgServer.RejectGame(context, &types.MsgRejectGame{
+		Creator:   bob,
+		GameIndex: "1",
+	})
+
+	ctx := sdk.UnwrapSDKContext(context)
+	require.NotNil(t, ctx)
+
+	events := sdk.StringifyEvents(ctx.EventManager().ABCIEvents())
+	require.Len(t, events, 2)
+	event := events[0]
+	require.EqualValues(t, sdk.StringEvent{
+		Type: "game-rejected",
+		Attributes: []sdk.Attribute{
+			{Key: "creator", Value: bob},
+			{Key: "game-index", Value: "1"},
+		},
+	}, event)
+}
+
+func TestRejectGameByRedNoMoveRemovedGame(t *testing.T) {
+	msgServer, keeper, context := setupMsgServerWithOneGameForRejectGame(t)
+	ctx := sdk.UnwrapSDKContext(context)
+	msgServer.RejectGame(context, &types.MsgRejectGame{
+		Creator:   carol,
+		GameIndex: "1",
+	})
+
+	systemInfo, found := keeper.GetSystemInfo(ctx)
+	require.True(t, found)
+	require.EqualValues(t, types.SystemInfo{
+		NextId: 2,
+	}, systemInfo)
+
+	_, found = keeper.GetStoredGame(ctx, "1")
+	require.False(t, found)
+}
+
+func TestRejectGameByRedNoMoveEmitted(t *testing.T) {
+	msgServer, _, context := setupMsgServerWithOneGameForRejectGame(t)
+	ctx := sdk.UnwrapSDKContext(context)
+	msgServer.RejectGame(context, &types.MsgRejectGame{
+		Creator:   carol,
+		GameIndex: "1",
+	})
+
+	require.NotNil(t, ctx)
+	events := sdk.StringifyEvents(ctx.EventManager().ABCIEvents())
+	event := events[0]
+	require.EqualValues(t, sdk.StringEvent{
+		Type: "game-rejected",
+		Attributes: []sdk.Attribute{
+			{Key: "creator", Value: carol},
+			{Key: "game-index", Value: "1"},
+		},
+	}, event)
+}
+
+func TestRejectGameByRedOneMove(t *testing.T) {
+	msgServer, _, context := setupMsgServerWithOneGameForRejectGame(t)
+	msgServer.PlayMove(context, &types.MsgPlayMove{
+		Creator:   bob,
+		GameIndex: "1",
+		FromX:     1,
+		FromY:     2,
+		ToX:       2,
+		ToY:       3,
+	})
+	rejectedGameResponse, err := msgServer.RejectGame(context, &types.MsgRejectGame{
+		Creator:   carol,
+		GameIndex: "1",
+	})
+	require.Nil(t, err)
+	require.EqualValues(t, types.MsgRejectGameResponse{}, *rejectedGameResponse)
+}
+
 func TestRejectGameByRedOneMoveRemovedGame(t *testing.T) {
 	msgServer, keeper, context := setupMsgServerWithOneGameForRejectGame(t)
 	msgServer.PlayMove(context, &types.MsgPlayMove{
@@ -67,4 +145,81 @@ func TestRejectGameByRedOneMoveRemovedGame(t *testing.T) {
 
 	_, found = keeper.GetStoredGame(sdk.UnwrapSDKContext(context), "1")
 	require.False(t, found)
+}
+
+func TestRejectGameByRedOneMoveEmitted(t *testing.T) {
+	msgServer, _, context := setupMsgServerWithOneGameForRejectGame(t)
+	ctx := sdk.UnwrapSDKContext(context)
+	msgServer.PlayMove(context, &types.MsgPlayMove{
+		Creator:   bob,
+		GameIndex: "1",
+		FromX:     1,
+		FromY:     2,
+		ToX:       2,
+		ToY:       3,
+	})
+
+	msgServer.RejectGame(context, &types.MsgRejectGame{
+		Creator:   carol,
+		GameIndex: "1",
+	})
+
+	require.NotNil(t, ctx)
+
+	events := sdk.StringifyEvents(ctx.EventManager().ABCIEvents())
+	event := events[0]
+	require.EqualValues(t, sdk.StringEvent{
+		Type: "game-rejected",
+		Attributes: []sdk.Attribute{
+			{Key: "creator", Value: carol},
+			{Key: "game-index", Value: "1"},
+		},
+	}, event)
+}
+
+func TestRejectGameByBlackWrongOneMove(t *testing.T) {
+	msgServer, _, context := setupMsgServerWithOneGameForRejectGame(t)
+	msgServer.PlayMove(context, &types.MsgPlayMove{
+		Creator:   bob,
+		GameIndex: "1",
+		FromX:     1,
+		FromY:     2,
+		ToX:       2,
+		ToY:       3,
+	})
+
+	rejectGameResponse, err := msgServer.RejectGame(context, &types.MsgRejectGame{
+		Creator:   bob,
+		GameIndex: "1",
+	})
+
+	require.Nil(t, rejectGameResponse)
+	require.Equal(t, "black player has already played", err.Error())
+}
+
+func TestRejectGameByRedWrong2Moves(t *testing.T) {
+	msgServer, _, context := setupMsgServerWithOneGameForRejectGame(t)
+	msgServer.PlayMove(context, &types.MsgPlayMove{
+		Creator:   bob,
+		GameIndex: "1",
+		FromX:     1,
+		FromY:     2,
+		ToX:       2,
+		ToY:       3,
+	})
+	msgServer.PlayMove(context, &types.MsgPlayMove{
+		Creator:   carol,
+		GameIndex: "1",
+		FromX:     0,
+		FromY:     5,
+		ToX:       1,
+		ToY:       4,
+	})
+	rejectedGameResponse, err := msgServer.RejectGame(context, &types.MsgRejectGame{
+		Creator:   carol,
+		GameIndex: "1",
+	})
+
+	require.Nil(t, rejectedGameResponse)
+	require.Equal(t, "red player has already played", err.Error())
 }
