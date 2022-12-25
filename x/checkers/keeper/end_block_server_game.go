@@ -48,6 +48,9 @@ func (k Keeper) ForfeitExpiredGames(goCtx context.Context) {
 			lastBoard := storedGame.Board
 			if storedGame.MoveCount <= 1 {
 				k.RemoveStoredGame(ctx, gameIndex)
+				if storedGame.MoveCount == 1 {
+					k.MustRefundWager(ctx, &storedGame)
+				}
 			} else {
 				storedGame.Winner, found = opponents[storedGame.Turn]
 				if !found {
@@ -55,6 +58,7 @@ func (k Keeper) ForfeitExpiredGames(goCtx context.Context) {
 				}
 				storedGame.Board = ""
 				k.SetStoredGame(ctx, storedGame)
+				k.MustPayWinnings(ctx, &storedGame)
 			}
 
 			ctx.EventManager().EmitEvent(
