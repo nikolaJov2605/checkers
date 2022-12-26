@@ -60,6 +60,12 @@ const (
 )
 
 const (
+	CreateGameGas       = 15000
+	PlayMoveGas         = 1000
+	RejectGameRefundGas = 14000
+)
+
+const (
 	NoFifoIndex = "-1"
 )
 
