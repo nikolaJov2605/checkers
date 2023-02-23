@@ -1,0 +1,6 @@
+[submodule "scripts/client"]
+	path = scripts/client
+	url = https://github.com/nikolaJov2605/checkers_client.git
+[submodule "client"]
+	path = client
+	url = https://github.com/nikolaJov2605/checkers_client.git
