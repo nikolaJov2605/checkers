@@ -17,6 +17,7 @@ require (
 	github.com/tendermint/spn v0.2.1-0.20220609194312-7833ecf4454a
 	github.com/tendermint/tendermint v0.34.19
 	github.com/tendermint/tm-db v0.6.7
+	golang.org/x/mod v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20230221151758-ace64dc21148
 	google.golang.org/grpc v1.53.0
 	gopkg.in/yaml.v2 v2.4.0
