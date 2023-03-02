@@ -1,0 +1,280 @@
+rules:
+
+  # type checking rules
+
+  - id: float_usage
+    pattern-either:
+    - pattern: |
+        ($X : float32)
+    - pattern: |
+        ($X : float64)
+    message: Float usage registered detected
+    languages: [go]
+    severity: ERROR
+    
+    
+
+  - id: possible_floating_point_usage
+    pattern: $X / $Y
+    message: Possible float usage detected
+    languages: [go]
+    severity: WARNING
+    
+    
+
+  # non-determinism checking rules
+
+  - id: map-iteration
+    pattern: |
+      $MAP := make(map[$MAP_NAME]$TYPE)
+      ...
+      for $V1, $V2 := range $MAP {
+        ...
+      }
+    message: Map iteration detected
+    languages: [go]
+    severity: ERROR
+    
+    
+  # matching switch for some reason
+  - id: select-usage
+    pattern: |
+      select {
+        case ... :
+          ...
+      }
+    message: Select usage detected
+    languages: [go]
+    severity: ERROR
+    
+    
+
+  - id: go-routine-usage
+    pattern: |
+      go $FUNC(...)
+    message: Go routine call detected
+    languages: [go]
+    severity: ERROR
+    
+    
+
+  - id: rand-usage
+    pattern-either:
+    - pattern: |
+        rand.$METHOD(...)
+    - pattern: |
+        $EXP.Rand(...)
+    message: Rand usage detected
+    languages: [go]
+    severity: ERROR
+    
+    
+
+  # non-deterministic packages
+
+#  - id: time-pkg-usage
+#    pattern: |
+#      import (
+#        ...
+#        "time"
+#        ...
+#      )
+#    message: Package time usage detected
+#    languages: [go]
+#    severity: WARNING
+    
+    
+
+  - id: unsafe-pkg-usage
+    pattern: |
+      import (
+        ...
+        "unsafe"
+        ...
+      )
+    message: Package unsafe usage detected. Package unsafe contains operations that step around the type safety of Go programs. Packages that import unsafe may be non-portable and are not protected by the Go 1 compatibility guidelines.
+    languages: [go]
+    severity: WARNING
+    
+    
+
+  - id: reflect-pkg-usage
+    pattern: |
+      import (
+        ...
+        "reflect"
+        ...
+      )
+    message: Package reflect usage detected. Package reflect implements run-time reflection, allowing a program to manipulate objects with arbitrary types. The typical use is to take a value with static type interface{} and extract its dynamic type information by calling TypeOf, which returns a Type.
+    languages: [go]
+    severity: WARNING
+    
+    
+
+  - id: runtime-pkg-usage
+    pattern: |
+      import (
+        ...
+        "runtime"
+        ...
+      )
+    message: Package runtime usage detected. Package runtime contains operations that interact with Go's runtime system, such as functions to control goroutines. It also includes the low-level type information used by the reflect package; see reflect's documentation for the programmable interface to the run-time type system.
+    languages: [go]
+    severity: WARNING
+    
+
+
+
+    # not set for sdk.Dec type
+  - id: division-before-multiplication
+    pattern-either:
+    - pattern: |
+        ($X / $Y) * $Z
+    - pattern: |
+        $X.Quo($Y).Mul($Z)
+    - pattern: |
+        $X.Quo($Y).MulInt($Z)
+    message: Division before multiplication detected
+    languages: [go]
+    severity: ERROR
+    
+  - id: validate-basic-call
+    pattern: |
+      ValidateBasic()
+    message: ValidateBasic doesn't need to be called explicitly
+    languages: [go]
+    severity: WARNING
+    
+    
+    
+  - id: err-nil-check
+    patterns:
+      - pattern-either:
+          - pattern: |
+              if err != nil {
+                      return err
+              }
+              return nil
+          - pattern: |
+              if err != nil {
+                      return $X, err
+              }
+              return $X, nil
+    message: superfluous nil err check before return
+    languages:
+      - go
+    severity: ERROR
+    metadata:
+      license: MIT
+      
+      
+      
+  - id: insecure-crypto-module-used
+    message: Detected use of an insecure cryptographic hashing method. This method is known to be broken and easily compromised. Use SHA256 or SHA3 instead.
+    metadata:
+      owasp:
+        - A03:2017 - Sensitive Data Exposure
+        - A02:2021 - Cryptographic Failures
+      cwe:
+        - "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      source-rule-url: https://github.com/securego/gosec
+      references:
+        - https://godoc.org/golang.org/x/crypto/sha3
+      category: security
+      technology:
+        - go
+      confidence: MEDIUM
+      subcategory:
+        - audit
+      likelihood: MEDIUM
+      impact: MEDIUM
+      license: Commons Clause License Condition v1.0[LGPL-2.1-only]
+    languages:
+      - go
+    severity: WARNING
+    pattern-either:
+      - patterns:
+          - pattern-inside: |
+              import "crypto/md5"
+              ...
+          - pattern: |
+              md5.$FUNC(...)
+      - patterns:
+          - pattern-inside: |
+              import "crypto/des"
+              ...
+          - pattern: |
+              des.$FUNC(...)
+      - patterns:
+          - pattern-inside: |
+              import "crypto/sha1"
+              ...
+          - pattern: |
+              sha1.$FUNC(...)
+      - patterns:
+          - pattern-inside: |
+              import "crypto/rc4"
+              ...
+          - pattern: |
+              rc4.$FUNC(...)
+      - patterns:
+          - pattern-inside: |
+              import "net/http/cgi"
+              ...
+          - pattern: |
+              cgi.$FUNC(...)
+
+
+
+
+
+  - id: integer-overflow-int16
+    message: Detected conversion of the result of a strconv.Atoi command to an
+      int16. This could lead to an integer overflow, which could possibly result
+      in unexpected behavior and even privilege escalation. Instead, use
+      `strconv.ParseInt`.
+    languages:
+      - go
+    severity: WARNING
+    patterns:
+      - pattern: |
+          $F, $ERR := strconv.Atoi($NUM)
+          ...
+          int16($F)
+      - metavariable-comparison:
+          metavariable: $NUM
+          comparison: $NUM > 32767 or $NUM < -32768
+          strip: true
+    metadata:
+      category: correctness
+      technology:
+        - go
+      license: Commons Clause License Condition v1.0[LGPL-2.1-only]
+
+
+
+
+  - id: integer-overflow-int32
+    message: Detected conversion of the result of a strconv.Atoi command to an
+      int32. This could lead to an integer overflow, which could possibly result
+      in unexpected behavior and even privilege escalation. Instead, use
+      `strconv.ParseInt`.
+    languages:
+      - go
+    severity: WARNING
+    patterns:
+      - pattern: |
+          $F, $ERR := strconv.Atoi($NUM)
+          ...
+          int32($F)
+      - metavariable-comparison:
+          metavariable: $NUM
+          comparison: $NUM > 2147483647 or $NUM < -2147483648
+          strip: true
+    metadata:
+      category: correctness
+      technology:
+        - go
+      license: Commons Clause License Condition v1.0[LGPL-2.1-only]
+
+
