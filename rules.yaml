@@ -37,15 +37,15 @@ rules:
     
     
   # matching switch for some reason
-  - id: select-usage
-    pattern: |
-      select {
-        case ... :
-          ...
-      }
-    message: Select usage detected
-    languages: [go]
-    severity: ERROR
+#  - id: select-usage
+#    pattern: |
+#      select {
+#        case ... :
+#          ...
+#      }
+#    message: Select usage detected
+#    languages: [go]
+#    severity: ERROR
     
     
 
