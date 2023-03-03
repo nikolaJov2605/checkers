@@ -22,5 +22,5 @@ testutil/
 .semgrep_logs/
 
 # pb go files
-*.pb.go
-*.pb.gw.go
+#*.pb.go
+#*.pb.gw.go
